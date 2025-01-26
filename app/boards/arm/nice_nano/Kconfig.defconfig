@@ -13,6 +13,10 @@ config USB_NRFX
 
 endif # USB_DEVICE_STACK
 
+config ZMK_DISPLAY
+    select LV_USE_LABEL
+    select LV_USE_IMG
+
 config BT_CTLR
     default BT
 
