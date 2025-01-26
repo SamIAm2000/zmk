@@ -47,6 +47,9 @@ int zmk_widget_wpm_status_init(struct zmk_widget_wpm_status *widget, lv_obj_t *p
     widget->obj = lv_label_create(parent);
     lv_obj_align(widget->obj, LV_ALIGN_RIGHT_MID, 0, 0);
 
+    // Move the WPM widget to the topmost layer
+    lv_obj_move_foreground(widget->obj);
+
     sys_slist_append(&widgets, &widget->node);
 
     widget_wpm_status_init();
