@@ -50,7 +50,7 @@ const lv_img_dsc_t fast_img1 = {
     .header.always_zero = 0,
     .header.w = 128,
     .header.h = 32,
-    .data_size = 512,
+    .data_size = 520,
     .header.cf = LV_IMG_CF_INDEXED_1BIT,
     .data = fast_img1_map,
 };
@@ -102,7 +102,7 @@ const lv_img_dsc_t fast_img2 = {
     .header.always_zero = 0,
     .header.w = 128,
     .header.h = 32,
-    .data_size = 512,
+    .data_size = 520,
     .header.cf = LV_IMG_CF_INDEXED_1BIT,
     .data = fast_img2_map,
 };
@@ -154,7 +154,7 @@ const lv_img_dsc_t idle_img1 = {
     .header.always_zero = 0,
     .header.w = 128,
     .header.h = 32,
-    .data_size = 512,
+    .data_size = 520,
     .header.cf = LV_IMG_CF_INDEXED_1BIT,
     .data = idle_img1_map,
 };
@@ -206,7 +206,7 @@ const lv_img_dsc_t idle_img2 = {
     .header.always_zero = 0,
     .header.w = 128,
     .header.h = 32,
-    .data_size = 512,
+    .data_size = 520,
     .header.cf = LV_IMG_CF_INDEXED_1BIT,
     .data = idle_img2_map,
 };
@@ -258,7 +258,7 @@ const lv_img_dsc_t idle_img3 = {
     .header.always_zero = 0,
     .header.w = 128,
     .header.h = 32,
-    .data_size = 512,
+    .data_size = 520,
     .header.cf = LV_IMG_CF_INDEXED_1BIT,
     .data = idle_img3_map,
 };
@@ -310,7 +310,7 @@ const lv_img_dsc_t idle_img4 = {
     .header.always_zero = 0,
     .header.w = 128,
     .header.h = 32,
-    .data_size = 512,
+    .data_size = 520,
     .header.cf = LV_IMG_CF_INDEXED_1BIT,
     .data = idle_img4_map,
 };
@@ -362,7 +362,7 @@ const lv_img_dsc_t idle_img5 = {
     .header.always_zero = 0,
     .header.w = 128,
     .header.h = 32,
-    .data_size = 512,
+    .data_size = 520,
     .header.cf = LV_IMG_CF_INDEXED_1BIT,
     .data = idle_img5_map,
 };
@@ -414,7 +414,7 @@ const lv_img_dsc_t slow_img = {
     .header.always_zero = 0,
     .header.w = 128,
     .header.h = 32,
-    .data_size = 512,
+    .data_size = 520,
     .header.cf = LV_IMG_CF_INDEXED_1BIT,
     .data = slow_img_map,
 };
