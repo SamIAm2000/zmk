@@ -99,7 +99,7 @@ void update_bongo_cat_wpm(struct zmk_widget_bongo_cat *widget, int wpm) {
 int zmk_widget_bongo_cat_init(struct zmk_widget_bongo_cat *widget, lv_obj_t *parent) {
     widget->obj = lv_img_create(parent);
 
-    lv_img_set_auto_size(widget->obj, true);
+    // lv_img_set_auto_size(widget->obj, true);
     update_bongo_cat_wpm(widget, 0);
 
     sys_slist_append(&widgets, &widget->node);
