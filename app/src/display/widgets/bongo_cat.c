@@ -51,7 +51,7 @@ const void *fast_images[] = {
     &fast_img2,
 };
 
-void set_img_src(void *var, lv_anim_value_t val) {
+void set_img_src(void *var, lv_coord_t val) {
     lv_obj_t *img = (lv_obj_t *)var;
     lv_img_set_src(img, images[val]);
 }
