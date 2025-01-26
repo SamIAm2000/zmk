@@ -12,7 +12,7 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #include <zmk/display.h>
-
+#include <lvgl.h>
 #include <zmk/display/widgets/bongo_cat.h>
 
 #if IS_ENABLED(CONFIG_ZMK_DISPLAY_WORK_QUEUE_DEDICATED)
