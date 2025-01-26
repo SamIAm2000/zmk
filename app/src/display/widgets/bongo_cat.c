@@ -51,7 +51,7 @@ const void *fast_images[] = {
     &fast_img2,
 };
 
-void set_img_src(void *var, lv_coord_t val) {
+void set_img_src(void *var, int val) {
     lv_obj_t *img = (lv_obj_t *)var;
     lv_img_set_src(img, images[val]);
 }
@@ -97,7 +97,7 @@ void update_bongo_cat_wpm(struct zmk_widget_bongo_cat *widget, int wpm) {
 }
 
 int zmk_widget_bongo_cat_init(struct zmk_widget_bongo_cat *widget, lv_obj_t *parent) {
-    widget->obj = lv_img_create(parent, NULL);
+    widget->obj = lv_img_create(parent);
 
     lv_img_set_auto_size(widget->obj, true);
     update_bongo_cat_wpm(widget, 0);
