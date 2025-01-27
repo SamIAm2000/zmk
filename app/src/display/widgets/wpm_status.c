@@ -47,6 +47,9 @@ int zmk_widget_wpm_status_init(struct zmk_widget_wpm_status *widget, lv_obj_t *p
     widget->obj = lv_label_create(parent);
     lv_obj_align(widget->obj, LV_ALIGN_RIGHT_MID, 0, 0);
 
+    // Set the color to white for OLED displays
+    lv_obj_set_style_text_color(widget->obj, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
+
     // Move the WPM widget to the topmost layer
     lv_obj_move_foreground(widget->obj);
 
