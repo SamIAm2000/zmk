@@ -45,16 +45,6 @@ lv_obj_t *zmk_display_status_screen() {
     lv_obj_t *screen;
     screen = lv_obj_create(NULL);
 
-#if IS_ENABLED(CONFIG_ZMK_WIDGET_BONGO_CAT)
-    zmk_widget_bongo_cat_init(&bongo_cat_widget, screen);
-    lv_obj_align(zmk_widget_bongo_cat_obj(&bongo_cat_widget), LV_ALIGN_CENTER, 0, 0);
-#endif
-
-#if IS_ENABLED(CONFIG_ZMK_WIDGET_WPM_STATUS)
-    zmk_widget_wpm_status_init(&wpm_status_widget, screen);
-    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_RIGHT, 0, 0);
-#endif
-
 #if IS_ENABLED(CONFIG_ZMK_WIDGET_BATTERY_STATUS)
     zmk_widget_battery_status_init(&battery_status_widget, screen);
     lv_obj_align(zmk_widget_battery_status_obj(&battery_status_widget), LV_ALIGN_TOP_RIGHT, 0, 0);
@@ -76,6 +66,20 @@ lv_obj_t *zmk_display_status_screen() {
     lv_obj_set_style_text_font(zmk_widget_layer_status_obj(&layer_status_widget),
                                lv_theme_get_font_small(screen), LV_PART_MAIN);
     lv_obj_align(zmk_widget_layer_status_obj(&layer_status_widget), LV_ALIGN_BOTTOM_LEFT, 0, 0);
+#endif
+
+#if IS_ENABLED(CONFIG_ZMK_WIDGET_BONGO_CAT)
+    zmk_widget_bongo_cat_init(&bongo_cat_widget, screen);
+    lv_obj_align(zmk_widget_bongo_cat_obj(&bongo_cat_widget), LV_ALIGN_CENTER, 0, 0);
+#endif
+
+#if IS_ENABLED(CONFIG_ZMK_WIDGET_WPM_STATUS)
+    zmk_widget_wpm_status_init(&wpm_status_widget, screen);
+    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_RIGHT, 0, 0);
+    lv_obj_set_z_index(zmk_widget_wpm_status_obj(&wpm_status_widget), 1);
+    lv_obj_set_style_bg_opa(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_OPA_0, LV_PART_MAIN);
+    lv_obj_set_style_text_color(zmk_widget_wpm_status_obj(&wpm_status_widget),
+                                lv_color_make(0xFF, 0xFF, 0xFF), LV_PART_MAIN);
 #endif
 
     return screen;
