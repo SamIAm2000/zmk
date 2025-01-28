@@ -4,7 +4,7 @@ My fork of ZMK with bongo cat working for nice nano v2 with SSD 1306 OLEDs (128x
 
 It works for using ZMK wired, haven't tested wireless but I imagine it wll drain the battery pretty fast.
 
-To add bongo cat on your keyboard, use this fork of ZMK in the west.yml of your ZMK build. 
+To add bongo cat on your keyboard, use this fork of ZMK and the `bongo-cat` branch in the west.yml of your ZMK build. 
 
 Add these lines to your `boardname.conf` file:
 ```
