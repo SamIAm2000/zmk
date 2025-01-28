@@ -15,9 +15,9 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <lvgl.h>
 #include <zmk/display/widgets/bongo_cat.h>
 
-#if IS_ENABLED(CONFIG_ZMK_DISPLAY_WORK_QUEUE_DEDICATED)
-#error "Bongo cat only works with the system work queue currently"
-#endif
+// #if IS_ENABLED(CONFIG_ZMK_DISPLAY_WORK_QUEUE_DEDICATED)
+// #error "Bongo cat only works with the system work queue currently"
+// #endif
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
