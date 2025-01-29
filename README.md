@@ -7,7 +7,6 @@ To add bongo cat on your keyboard, use this fork of ZMK and the `bongo-cat` bran
 Add these lines to your `boardname.conf` file:
 ```
 CONFIG_ZMK_DISPLAY=y
-CONFIG_ZMK_DISPLAY_WORK_QUEUE_DEDICATED=y
 CONFIG_ZMK_WPM=y
 CONFIG_ZMK_WIDGET_WPM_STATUS=y
 CONFIG_ZMK_WIDGET_LAYER_STATUS=n
