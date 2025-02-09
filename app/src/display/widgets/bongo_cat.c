@@ -16,7 +16,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 static lv_anim_t idle_anim;
-static lv_anim_t tap_anim;
+static lv_timer_t *idle_check_timer = NULL;
 
 LV_IMG_DECLARE(idle_img1);
 LV_IMG_DECLARE(idle_img2);
@@ -32,14 +32,17 @@ static const void *tap_images[] = {&fast_img1, &fast_img2};
 
 #define IDLE_FRAMES 5
 #define TAP_FRAMES 2
-#define IDLE_ANIM_TIME 1000 // 1 second for full idle cycle
-#define TAP_ANIM_TIME 100   // 100ms for tap animation
-#define IDLE_TIMEOUT_MS 500 // Return to idle after 500ms of no keypresses
+#define IDLE_ANIM_TIME 1000   // 1 second for full idle cycle
+#define IDLE_TIMEOUT_MS 500   // Return to idle after 500ms of no keypresses
+#define IDLE_CHECK_PERIOD 100 // Check for idle every 100ms
 
 struct bongo_cat_state {
     bool key_pressed;
     uint32_t last_tap;
+    lv_obj_t *obj; // Store reference to the image object
 };
+
+static struct bongo_cat_state current_state = {.key_pressed = false, .last_tap = 0, .obj = NULL};
 
 static void set_idle_frame(void *var, int32_t val) {
     LOG_DBG("BONGO: Idle animation frame: %d", val);
@@ -48,15 +51,8 @@ static void set_idle_frame(void *var, int32_t val) {
     lv_img_set_src(img, idle_images[frame]);
 }
 
-static void set_tap_frame(void *var, int32_t val) {
-    LOG_DBG("BONGO: Tap animation frame: %d", val);
-    lv_obj_t *img = (lv_obj_t *)var;
-    lv_img_set_src(img, tap_images[val % TAP_FRAMES]);
-}
-
 static void start_idle_animation(lv_obj_t *obj) {
     LOG_DBG("BONGO: Starting idle animation");
-    lv_anim_del(obj, set_tap_frame);
 
     lv_anim_init(&idle_anim);
     lv_anim_set_var(&idle_anim, obj);
@@ -67,9 +63,19 @@ static void start_idle_animation(lv_obj_t *obj) {
     lv_anim_start(&idle_anim);
 }
 
+static void check_idle_timeout(lv_timer_t *timer) {
+    uint32_t now = k_uptime_get_32();
+    uint32_t time_since_last_tap = now - current_state.last_tap;
+
+    if (time_since_last_tap >= IDLE_TIMEOUT_MS && current_state.obj != NULL) {
+        LOG_DBG("BONGO: Idle timeout reached, starting idle animation");
+        start_idle_animation(current_state.obj);
+    }
+}
+
 static void play_tap_animation(lv_obj_t *obj) {
     LOG_DBG("BONGO: Playing tap animation");
-    lv_anim_del(obj, set_idle_frame);
+    lv_anim_del(obj, set_idle_frame); // Stop idle animation if running
 
     static uint8_t current_frame = 0;
     current_frame = (current_frame + 1) % TAP_FRAMES;
@@ -83,30 +89,23 @@ static void update_bongo_cat_anim(struct zmk_widget_bongo_cat *widget,
         return;
     }
 
-    uint32_t now = k_uptime_get_32();
-    uint32_t time_since_last_tap = now - state.last_tap;
+    current_state.obj = widget->obj; // Update the global state
 
     if (state.key_pressed) {
-        // Play tap animation on keypress
         play_tap_animation(widget->obj);
-    } else if (time_since_last_tap >= IDLE_TIMEOUT_MS) {
-        // Return to idle animation after timeout
-        start_idle_animation(widget->obj);
     }
 }
 
 static struct bongo_cat_state bongo_cat_get_state(const zmk_event_t *eh) {
-    static struct bongo_cat_state state = {.key_pressed = false, .last_tap = 0};
-
     const struct zmk_keycode_state_changed *ev = as_zmk_keycode_state_changed(eh);
     if (ev != NULL && ev->state) { // Only update on key press, not release
-        state.key_pressed = true;
-        state.last_tap = k_uptime_get_32();
+        current_state.key_pressed = true;
+        current_state.last_tap = k_uptime_get_32();
     } else {
-        state.key_pressed = false;
+        current_state.key_pressed = false;
     }
 
-    return state;
+    return current_state;
 }
 
 static void bongo_cat_update_cb(struct bongo_cat_state state) {
@@ -130,8 +129,14 @@ int zmk_widget_bongo_cat_init(struct zmk_widget_bongo_cat *widget, lv_obj_t *par
 
     LOG_DBG("BONGO: Image object created");
 
+    // Initialize idle check timer
+    if (idle_check_timer == NULL) {
+        idle_check_timer = lv_timer_create(check_idle_timeout, IDLE_CHECK_PERIOD, NULL);
+    }
+
     // Start with idle animation
     start_idle_animation(widget->obj);
+    current_state.obj = widget->obj;
 
     sys_slist_append(&widgets, &widget->node);
 
