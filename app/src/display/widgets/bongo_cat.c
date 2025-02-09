@@ -4,10 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 #include <zephyr/kernel.h>
-
 #include <zmk/event_manager.h>
 #include <zmk/events/wpm_state_changed.h>
-
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
@@ -15,21 +13,14 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <lvgl.h>
 #include <zmk/display/widgets/bongo_cat.h>
 
-// #if IS_ENABLED(CONFIG_ZMK_DISPLAY_WORK_QUEUE_DEDICATED)
-// #error "Bongo cat only works with the system work queue currently"
-// #endif
-
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
-enum anim_state {
-    anim_state_none,
-    anim_state_idle,
-    anim_state_slow,
-    anim_state_fast
-} current_anim_state;
+enum anim_state { anim_state_none, anim_state_idle, anim_state_slow, anim_state_fast };
 
-const void **images;
-uint8_t images_len;
+struct bongo_cat_state {
+    int wpm;
+    enum anim_state anim;
+};
 
 LV_IMG_DECLARE(idle_img1);
 LV_IMG_DECLARE(idle_img2);
@@ -42,25 +33,20 @@ LV_IMG_DECLARE(slow_img);
 LV_IMG_DECLARE(fast_img1);
 LV_IMG_DECLARE(fast_img2);
 
-const void *idle_images[] = {
-    &idle_img1, &idle_img2, &idle_img3, &idle_img4, &idle_img5,
-};
-
-const void *fast_images[] = {
-    &fast_img1,
-    &fast_img2,
-};
+const void *idle_images[] = {&idle_img1, &idle_img2, &idle_img3, &idle_img4, &idle_img5};
+const void *fast_images[] = {&fast_img1, &fast_img2};
 
 void set_img_src(void *var, int val) {
     lv_obj_t *img = (lv_obj_t *)var;
-    lv_img_set_src(img, images[val]);
+    lv_img_set_src(img, val);
 }
 
-void update_bongo_cat_wpm(struct zmk_widget_bongo_cat *widget, int wpm) {
-    LOG_DBG("anim state %d", current_anim_state);
-    if (wpm < CONFIG_ZMK_WIDGET_BONGO_CAT_IDLE_LIMIT) {
-        if (current_anim_state != anim_state_idle) {
-            LOG_DBG("Set source to idle images!");
+static void update_bongo_cat_anim(struct zmk_widget_bongo_cat *widget,
+                                  struct bongo_cat_state state) {
+    LOG_DBG("Updating animation state: WPM=%d, AnimState=%d", state.wpm, state.anim);
+
+    if (state.wpm < CONFIG_ZMK_WIDGET_BONGO_CAT_IDLE_LIMIT) {
+        if (state.anim != anim_state_idle) {
             lv_anim_init(&widget->anim);
             lv_anim_set_var(&widget->anim, widget->obj);
             lv_anim_set_time(&widget->anim, 1000);
@@ -68,20 +54,15 @@ void update_bongo_cat_wpm(struct zmk_widget_bongo_cat *widget, int wpm) {
             lv_anim_set_exec_cb(&widget->anim, set_img_src);
             lv_anim_set_repeat_count(&widget->anim, 10);
             lv_anim_set_repeat_delay(&widget->anim, 100);
-            images = idle_images;
-            current_anim_state = anim_state_idle;
             lv_anim_start(&widget->anim);
         }
-    } else if (wpm < CONFIG_ZMK_WIDGET_BONGO_CAT_SLOW_LIMIT) {
-        if (current_anim_state != anim_state_slow) {
-            LOG_DBG("Set source to slow image!");
+    } else if (state.wpm < CONFIG_ZMK_WIDGET_BONGO_CAT_SLOW_LIMIT) {
+        if (state.anim != anim_state_slow) {
             lv_anim_del(widget->obj, set_img_src);
             lv_img_set_src(widget->obj, &slow_img);
-            current_anim_state = anim_state_slow;
         }
     } else {
-        if (current_anim_state != anim_state_fast) {
-            LOG_DBG("Set source to fast images!");
+        if (state.anim != anim_state_fast) {
             lv_anim_init(&widget->anim);
             lv_anim_set_time(&widget->anim, 200);
             lv_anim_set_repeat_delay(&widget->anim, 200);
@@ -89,35 +70,45 @@ void update_bongo_cat_wpm(struct zmk_widget_bongo_cat *widget, int wpm) {
             lv_anim_set_values(&widget->anim, 0, 1);
             lv_anim_set_exec_cb(&widget->anim, set_img_src);
             lv_anim_set_repeat_count(&widget->anim, LV_ANIM_REPEAT_INFINITE);
-            images = fast_images;
-            current_anim_state = anim_state_fast;
             lv_anim_start(&widget->anim);
         }
     }
 }
 
+static struct bongo_cat_state bongo_cat_get_state(const zmk_event_t *eh) {
+    struct bongo_cat_state state = {};
+    state.wpm = zmk_wpm_get_state();
+
+    if (state.wpm < CONFIG_ZMK_WIDGET_BONGO_CAT_IDLE_LIMIT) {
+        state.anim = anim_state_idle;
+    } else if (state.wpm < CONFIG_ZMK_WIDGET_BONGO_CAT_SLOW_LIMIT) {
+        state.anim = anim_state_slow;
+    } else {
+        state.anim = anim_state_fast;
+    }
+
+    return state;
+}
+
+static void bongo_cat_update_cb(struct bongo_cat_state state) {
+    struct zmk_widget_bongo_cat *widget;
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { update_bongo_cat_anim(widget, state); }
+}
+
+ZMK_DISPLAY_WIDGET_LISTENER(widget_bongo_cat, struct bongo_cat_state, bongo_cat_update_cb,
+                            bongo_cat_get_state)
+ZMK_SUBSCRIPTION(widget_bongo_cat, zmk_wpm_state_changed);
+
 int zmk_widget_bongo_cat_init(struct zmk_widget_bongo_cat *widget, lv_obj_t *parent) {
     widget->obj = lv_img_create(parent);
 
-    // lv_img_set_auto_size(widget->obj, true);
-    update_bongo_cat_wpm(widget, 0);
+    // Initialize with the default state
+    struct bongo_cat_state initial_state = bongo_cat_get_state(NULL);
+    update_bongo_cat_anim(widget, initial_state);
 
     sys_slist_append(&widgets, &widget->node);
-
+    widget_bongo_cat_init();
     return 0;
 }
 
 lv_obj_t *zmk_widget_bongo_cat_obj(struct zmk_widget_bongo_cat *widget) { return widget->obj; }
-
-int bongo_cat_listener(const zmk_event_t *eh) {
-    struct zmk_widget_bongo_cat *widget;
-    struct zmk_wpm_state_changed *ev = as_zmk_wpm_state_changed(eh);
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
-        LOG_DBG("Set the WPM %d", ev->state);
-        update_bongo_cat_wpm(widget, ev->state);
-    }
-    return ZMK_EV_EVENT_BUBBLE;
-}
-
-ZMK_LISTENER(zmk_widget_bongo_cat, bongo_cat_listener)
-ZMK_SUBSCRIPTION(zmk_widget_bongo_cat, zmk_wpm_state_changed);
