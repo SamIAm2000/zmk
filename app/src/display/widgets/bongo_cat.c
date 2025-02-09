@@ -21,50 +21,56 @@ LV_IMG_DECLARE(idle_img1);
 LV_IMG_DECLARE(fast_img1);
 LV_IMG_DECLARE(fast_img2);
 
+// Persistent animation state
+static struct {
+    const void **current_images;
+    int num_frames;
+    bool is_typing;
+} anim_state = {.current_images = NULL, .num_frames = 0, .is_typing = false};
+
 static const void *idle_images[] = {&idle_img1};
 
 static const void *typing_images[] = {&fast_img1, &fast_img2};
 
-struct bongo_cat_state {
-    int wpm;
-    const void **current_images;
-    int current_frame;
-    int num_frames;
-};
-
 static void set_img_src(void *var, int32_t val) {
-    LOG_ERR("BONGO: Animation frame callback: %d", val); // Using ERR for visibility
+    LOG_DBG("BONGO: Animation frame callback: %d", val);
     lv_obj_t *img = (lv_obj_t *)var;
-    struct bongo_cat_state *state = (struct bongo_cat_state *)lv_obj_get_user_data(img);
-    if (state && state->current_images) {
-        int frame = val % state->num_frames;
-        LOG_ERR("BONGO: Setting frame %d of %d", frame, state->num_frames);
-        lv_img_set_src(img, state->current_images[frame]);
+
+    if (anim_state.current_images && anim_state.num_frames > 0) {
+        int frame = val % anim_state.num_frames;
+        LOG_DBG("BONGO: Setting frame %d of %d", frame, anim_state.num_frames);
+        lv_img_set_src(img, anim_state.current_images[frame]);
     }
 }
 
-static void update_bongo_cat_anim(struct zmk_widget_bongo_cat *widget,
-                                  struct bongo_cat_state state) {
-    LOG_ERR("BONGO: Updating animation, WPM: %d", state.wpm);
+static void update_bongo_cat_anim(struct zmk_widget_bongo_cat *widget, bool is_typing) {
+    LOG_DBG("BONGO: Updating animation, is_typing: %d", is_typing);
 
     if (!widget || !widget->obj) {
         LOG_ERR("BONGO: Widget or object is NULL!");
         return;
     }
 
+    // Only update if state changed
+    if (is_typing == anim_state.is_typing) {
+        return;
+    }
+
     // Stop any existing animation
     lv_anim_del(widget->obj, set_img_src);
 
+    anim_state.is_typing = is_typing;
+
     // Set up new animation
-    if (state.wpm == 0) {
-        LOG_ERR("BONGO: Setting idle animation");
-        state.current_images = idle_images;
-        state.num_frames = 1;
+    if (!is_typing) {
+        LOG_DBG("BONGO: Setting idle animation");
+        anim_state.current_images = idle_images;
+        anim_state.num_frames = 1;
         lv_img_set_src(widget->obj, idle_images[0]);
     } else {
-        LOG_ERR("BONGO: Setting typing animation");
-        state.current_images = typing_images;
-        state.num_frames = 2;
+        LOG_DBG("BONGO: Setting typing animation");
+        anim_state.current_images = typing_images;
+        anim_state.num_frames = 2;
 
         lv_anim_init(&widget_anim);
         lv_anim_set_var(&widget_anim, widget->obj);
@@ -72,27 +78,18 @@ static void update_bongo_cat_anim(struct zmk_widget_bongo_cat *widget,
         lv_anim_set_time(&widget_anim, 200);
         lv_anim_set_exec_cb(&widget_anim, set_img_src);
         lv_anim_set_repeat_count(&widget_anim, LV_ANIM_REPEAT_INFINITE);
-
-        lv_obj_set_user_data(widget->obj, &state);
         lv_anim_start(&widget_anim);
     }
 }
 
-static struct bongo_cat_state bongo_cat_get_state(const zmk_event_t *eh) {
-    struct bongo_cat_state state = {
-        .wpm = zmk_wpm_get_state(), .current_images = NULL, .current_frame = 0, .num_frames = 0};
-    LOG_ERR("BONGO: Current WPM: %d", state.wpm);
-    return state;
-}
-
-static void bongo_cat_update_cb(struct bongo_cat_state state) {
-    LOG_ERR("BONGO: Update callback triggered");
+static void bongo_cat_update_cb(int wpm) {
+    LOG_DBG("BONGO: Update callback triggered, WPM: %d", wpm);
     struct zmk_widget_bongo_cat *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { update_bongo_cat_anim(widget, state); }
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { update_bongo_cat_anim(widget, wpm > 0); }
 }
 
 int zmk_widget_bongo_cat_init(struct zmk_widget_bongo_cat *widget, lv_obj_t *parent) {
-    LOG_ERR("BONGO: === INITIALIZATION START ===");
+    LOG_DBG("BONGO: === INITIALIZATION START ===");
 
     if (!widget || !parent) {
         LOG_ERR("BONGO: Invalid widget or parent!");
@@ -105,20 +102,28 @@ int zmk_widget_bongo_cat_init(struct zmk_widget_bongo_cat *widget, lv_obj_t *par
         return -1;
     }
 
-    LOG_ERR("BONGO: Image object created");
+    LOG_DBG("BONGO: Image object created");
 
-    struct bongo_cat_state initial_state = bongo_cat_get_state(NULL);
-    update_bongo_cat_anim(widget, initial_state);
+    // Initialize with idle animation
+    anim_state.current_images = idle_images;
+    anim_state.num_frames = 1;
+    anim_state.is_typing = false;
+    lv_img_set_src(widget->obj, idle_images[0]);
 
     sys_slist_append(&widgets, &widget->node);
 
-    LOG_ERR("BONGO: === INITIALIZATION COMPLETE ===");
+    LOG_DBG("BONGO: === INITIALIZATION COMPLETE ===");
     return 0;
 }
 
-ZMK_DISPLAY_WIDGET_LISTENER(widget_bongo_cat, struct bongo_cat_state, bongo_cat_update_cb,
-                            bongo_cat_get_state)
+static void bongo_cat_listener_cb(const zmk_event_t *eh) {
+    struct zmk_wpm_state_changed *ev = as_zmk_wpm_state_changed(eh);
+    if (ev) {
+        bongo_cat_update_cb(ev->state);
+    }
+}
 
+ZMK_LISTENER(widget_bongo_cat, bongo_cat_listener_cb);
 ZMK_SUBSCRIPTION(widget_bongo_cat, zmk_wpm_state_changed);
 
 lv_obj_t *zmk_widget_bongo_cat_obj(struct zmk_widget_bongo_cat *widget) { return widget->obj; }
