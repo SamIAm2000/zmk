@@ -38,36 +38,41 @@ const void *fast_images[] = {&fast_img1, &fast_img2};
 
 void set_img_src(void *var, int val) {
     lv_obj_t *img = (lv_obj_t *)var;
-    lv_img_set_src(img, val);
+    if (val <= 4) {
+        lv_img_set_src(img, idle_images[val]);
+    } else {
+        lv_img_set_src(img, fast_images[val - 5]);
+    }
 }
 
 static void update_bongo_cat_anim(struct zmk_widget_bongo_cat *widget,
                                   struct bongo_cat_state state) {
     LOG_DBG("Updating animation state: WPM=%d, AnimState=%d", state.wpm, state.anim);
 
+    lv_anim_del(widget->obj, set_img_src);
+
     if (state.wpm < CONFIG_ZMK_WIDGET_BONGO_CAT_IDLE_LIMIT) {
+        lv_img_set_src(widget->obj, idle_images[0]);
+
         if (state.anim != anim_state_idle) {
             lv_anim_init(&widget->anim);
             lv_anim_set_var(&widget->anim, widget->obj);
             lv_anim_set_time(&widget->anim, 1000);
             lv_anim_set_values(&widget->anim, 0, 4);
             lv_anim_set_exec_cb(&widget->anim, set_img_src);
-            lv_anim_set_repeat_count(&widget->anim, 10);
-            lv_anim_set_repeat_delay(&widget->anim, 100);
+            lv_anim_set_repeat_count(&widget->anim, LV_ANIM_REPEAT_INFINITE);
             lv_anim_start(&widget->anim);
         }
     } else if (state.wpm < CONFIG_ZMK_WIDGET_BONGO_CAT_SLOW_LIMIT) {
-        if (state.anim != anim_state_slow) {
-            lv_anim_del(widget->obj, set_img_src);
-            lv_img_set_src(widget->obj, &slow_img);
-        }
+        lv_img_set_src(widget->obj, &slow_img);
     } else {
+        lv_img_set_src(widget->obj, fast_images[0]);
+
         if (state.anim != anim_state_fast) {
             lv_anim_init(&widget->anim);
             lv_anim_set_time(&widget->anim, 200);
-            lv_anim_set_repeat_delay(&widget->anim, 200);
             lv_anim_set_var(&widget->anim, widget->obj);
-            lv_anim_set_values(&widget->anim, 0, 1);
+            lv_anim_set_values(&widget->anim, 5, 6);
             lv_anim_set_exec_cb(&widget->anim, set_img_src);
             lv_anim_set_repeat_count(&widget->anim, LV_ANIM_REPEAT_INFINITE);
             lv_anim_start(&widget->anim);
