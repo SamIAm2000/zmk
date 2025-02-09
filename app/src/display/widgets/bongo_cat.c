@@ -40,9 +40,11 @@ struct bongo_cat_state {
     bool key_pressed;
     uint32_t last_tap;
     lv_obj_t *obj; // Store reference to the image object
+    bool is_idle;  // Track if we're already in idle animation
 };
 
-static struct bongo_cat_state current_state = {.key_pressed = false, .last_tap = 0, .obj = NULL};
+static struct bongo_cat_state current_state = {
+    .key_pressed = false, .last_tap = 0, .obj = NULL, .is_idle = true};
 
 static void set_idle_frame(void *var, int32_t val) {
     LOG_DBG("BONGO: Idle animation frame: %d", val);
@@ -52,7 +54,12 @@ static void set_idle_frame(void *var, int32_t val) {
 }
 
 static void start_idle_animation(lv_obj_t *obj) {
+    if (current_state.is_idle) {
+        return; // Don't restart if already in idle animation
+    }
+
     LOG_DBG("BONGO: Starting idle animation");
+    current_state.is_idle = true;
 
     lv_anim_init(&idle_anim);
     lv_anim_set_var(&idle_anim, obj);
@@ -67,7 +74,8 @@ static void check_idle_timeout(lv_timer_t *timer) {
     uint32_t now = k_uptime_get_32();
     uint32_t time_since_last_tap = now - current_state.last_tap;
 
-    if (time_since_last_tap >= IDLE_TIMEOUT_MS && current_state.obj != NULL) {
+    if (time_since_last_tap >= IDLE_TIMEOUT_MS && current_state.obj != NULL &&
+        !current_state.is_idle) {
         LOG_DBG("BONGO: Idle timeout reached, starting idle animation");
         start_idle_animation(current_state.obj);
     }
@@ -75,6 +83,7 @@ static void check_idle_timeout(lv_timer_t *timer) {
 
 static void play_tap_animation(lv_obj_t *obj) {
     LOG_DBG("BONGO: Playing tap animation");
+    current_state.is_idle = false;
     lv_anim_del(obj, set_idle_frame); // Stop idle animation if running
 
     static uint8_t current_frame = 0;
@@ -135,8 +144,9 @@ int zmk_widget_bongo_cat_init(struct zmk_widget_bongo_cat *widget, lv_obj_t *par
     }
 
     // Start with idle animation
-    start_idle_animation(widget->obj);
     current_state.obj = widget->obj;
+    current_state.is_idle = false; // Set to false so initial animation will start
+    start_idle_animation(widget->obj);
 
     sys_slist_append(&widgets, &widget->node);
 
