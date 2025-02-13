@@ -86,3 +86,56 @@ manifest:
   self:
     path: config
 ```
+
+Your config/boards/shields/[boardname]/Kconfig.defconfig file should look similar to this, but with your keyboard name. You can reference this [file](https://github.com/SamIAm2000/zmk-config-lagom-bongo/blob/bongo-with-dedicated-work-queue/config/boards/shields/radiance/Kconfig.defconfig):
+```
+if SHIELD_[YOUR_KEYBOARD_NAME]
+
+config ZMK_KEYBOARD_NAME
+    default "[your_keyboard_name]"
+
+if ZMK_DISPLAY
+
+config I2C
+    default y
+
+config SSD1306
+    default y
+
+# Add these lines for Bongo Cat
+config LV_USE_ANIMATION
+    bool
+    default y
+
+config ZMK_WIDGET_BONGO_CAT
+    bool
+    default y
+    select LV_USE_IMG
+    select LV_USE_ANIMATION
+    
+endif # ZMK_DISPLAY
+
+if LVGL
+
+config LV_Z_VDB_SIZE
+    default 64
+
+config LV_DPI_DEF
+    default 148
+
+config LV_Z_BITS_PER_PIXEL
+    default 1
+
+choice LV_COLOR_DEPTH
+    default LV_COLOR_DEPTH_1
+endchoice
+
+config LV_USE_LABEL
+    default y
+
+endif # LVGL
+
+endif # SHIELD_RADIANCE
+```
+
+
